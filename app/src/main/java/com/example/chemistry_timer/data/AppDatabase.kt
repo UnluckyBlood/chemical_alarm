@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [TimerEntity::class],
-    version = 2, // <-- БЫЛО 1, СТАЛО 2
+    version = 3, // увеличено для обновления схемы
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,7 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "chem_timer_db"
                 )
-                    .fallbackToDestructiveMigration() // <-- ДОБАВЛЕНО (позволяет обновить БД без краша)
+                    .fallbackToDestructiveMigration() // пересоздаёт БД при несовместимости
                     .build()
                 INSTANCE = instance
                 instance

@@ -14,6 +14,6 @@ data class TimerEntity(
     var totalSeconds: Long = 0,
     var remainingSeconds: Long = 0,
     var isRunning: Boolean = false,
-    var customSoundUri: String = "", // <-- ДОБАВЛЕНО
+    var customSoundUri: String = "",
     var createdAt: Long = System.currentTimeMillis()
 )

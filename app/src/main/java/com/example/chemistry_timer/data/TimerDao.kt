@@ -26,7 +26,6 @@ interface TimerDao {
     @Query("SELECT MAX(number) FROM timers")
     suspend fun getMaxNumber(): Int?
 
-    // <-- ДОБАВЛЕНО (без этого сервис падал при обновлении времени)
     @Query("UPDATE timers SET remainingSeconds = :remaining WHERE id = :timerId")
     suspend fun updateRemainingSeconds(timerId: Long, remaining: Long)
 }

@@ -1,4 +1,4 @@
-package com.example.chemistry_timer.receiver // <-- ИСПРАВЛЕНО
+package com.example.chemistry_timer.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context

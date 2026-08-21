@@ -1,6 +1,8 @@
 package com.example.chemistry_timer
 
 import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -20,9 +22,22 @@ class TimerDetailActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
     private var timerId: Long = -1
     private var currentTimer: TimerEntity? = null
-
-    // Переменная для хранения выбранного звука
     private var selectedSoundUri: String = ""
+
+    private val soundPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val uri = result.data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            if (uri != null) {
+                selectedSoundUri = uri.toString()
+                binding.tvSelectedSound.text = "Звук выбран: ${uri.lastPathSegment ?: "звук"}"
+            } else {
+                selectedSoundUri = ""
+                binding.tvSelectedSound.text = "Используется звук по умолчанию"
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,11 +47,11 @@ class TimerDetailActivity : AppCompatActivity() {
         db = AppDatabase.getDatabase(this)
         timerId = intent.getLongExtra("TIMER_ID", -1)
 
+        setupToolbar()
         setupNumberPickers()
         setupFormulaPreview()
-        setupToolbar()
         setupSaveButton()
-        setupSoundPicker() // <-- Инициализация выбора звука
+        setupSoundPicker()
         loadTimer()
     }
 
@@ -71,47 +86,33 @@ class TimerDetailActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 val text = s?.toString() ?: ""
-                if (text.isNotEmpty()) {
-                    binding.tvFormulaPreview.text = ChemicalFormulaHelper.parseFormula(text)
+                binding.tvFormulaPreview.text = if (text.isNotEmpty()) {
+                    ChemicalFormulaHelper.parseFormula(text)
                 } else {
-                    binding.tvFormulaPreview.text = ""
+                    ""
                 }
             }
         })
     }
 
     private fun setupSaveButton() {
-        binding.btnSave.setOnClickListener {
-            saveTimer()
-        }
+        binding.btnSave.setOnClickListener { saveTimer() }
     }
 
-    // Метод для выбора звука
     private fun setupSoundPicker() {
         binding.btnSelectSound.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                type = "audio/*"
-                addCategory(Intent.CATEGORY_OPENABLE)
+            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
+            intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+            intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Выберите звук таймера")
+            if (selectedSoundUri.isNotEmpty()) {
+                intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(selectedSoundUri))
             }
             soundPickerLauncher.launch(intent)
         }
     }
 
-    // Лаунчер для получения результата выбора файла
-    private val soundPickerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            result.data?.data?.let { uri ->
-                selectedSoundUri = uri.toString()
-                binding.tvSelectedSound.text = "Звук выбран: ${uri.lastPathSegment ?: "файл"}"
-            }
-        }
-    }
-
     private fun loadTimer() {
         if (timerId == -1L) return
-
         lifecycleScope.launch {
             currentTimer = db.timerDao().getTimerById(timerId)
             currentTimer?.let { timer ->
@@ -120,19 +121,15 @@ class TimerDetailActivity : AppCompatActivity() {
                 binding.etFormula.setText(timer.formula)
                 binding.etDescription.setText(timer.description)
 
-                // Запоминаем текущий звук, если он был сохранен ранее
                 selectedSoundUri = timer.customSoundUri
                 if (selectedSoundUri.isNotEmpty()) {
                     binding.tvSelectedSound.text = "Звук выбран: ${selectedSoundUri.substringAfterLast("/")}"
                 }
 
                 val total = timer.totalSeconds
-                val h = (total / 3600).toInt()
-                val m = ((total % 3600) / 60).toInt()
-                val s = (total % 60).toInt()
-                binding.npHours.value = h
-                binding.npMinutes.value = m
-                binding.npSeconds.value = s
+                binding.npHours.value = (total / 3600).toInt()
+                binding.npMinutes.value = ((total % 3600) / 60).toInt()
+                binding.npSeconds.value = (total % 60).toInt()
 
                 binding.toolbarDetail.title = "Таймер #${timer.number}"
             }
@@ -162,7 +159,7 @@ class TimerDetailActivity : AppCompatActivity() {
                 description = description,
                 totalSeconds = totalSeconds,
                 remainingSeconds = totalSeconds,
-                customSoundUri = selectedSoundUri // <-- Сохраняем выбранный звук
+                customSoundUri = selectedSoundUri
             ) ?: TimerEntity(
                 number = number,
                 name = name,
@@ -170,7 +167,7 @@ class TimerDetailActivity : AppCompatActivity() {
                 description = description,
                 totalSeconds = totalSeconds,
                 remainingSeconds = totalSeconds,
-                customSoundUri = selectedSoundUri // <-- Сохраняем выбранный звук
+                customSoundUri = selectedSoundUri
             )
 
             db.timerDao().insertTimer(timer)

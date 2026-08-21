@@ -37,7 +37,11 @@
         <service
             android:name=".service.TimerService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.foreground_service_type_special_use_description"
+                android:value="Таймеры обратного отсчёта" />
+        </service>
 
         <receiver
             android:name=".receiver.AlarmReceiver"
